@@ -11,6 +11,9 @@ class Game:
         self.state = 'menu'
         self.board_size = 15
         self.mode = None
+        self.first_player = 'human'
+        self.human_player = PLAYER_X
+        self.ai_player = PLAYER_O
         self.ai_algorithm = 'alpha_beta'
         self.ai_depth = DEFAULT_DEPTH
         self.board = None
@@ -36,7 +39,9 @@ class Game:
         self.gui.quit()
 
     def _run_menu(self):
-        buttons, btn_pvp, btn_pve = self.gui.draw_menu()
+        buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first = self.gui.draw_menu(
+            self.first_player
+        )
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -47,11 +52,15 @@ class Game:
                     self.gui.toggle_fullscreen()
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                result = self.gui.handle_menu_click(event.pos, buttons, btn_pvp, btn_pve)
+                result = self.gui.handle_menu_click(
+                    event.pos, buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first
+                )
                 if result:
                     action, value = result
                     if action == 'size':
                         self.board_size = value
+                    elif action == 'first_player':
+                        self.first_player = value
                     elif action == 'mode':
                         self.mode = value
                         self._start_game()
@@ -62,13 +71,19 @@ class Game:
     def _start_game(self):
         self.board = Board(self.board_size)
         self.current_player = PLAYER_X
+        self.human_player = PLAYER_X
+        self.ai_player = PLAYER_O
         self.game_over = False
         self.winner = None
         self.win_cells = []
         self.waiting_ai = False
 
         if self.mode == 'pve':
-            self.ai = AI(player=PLAYER_O, depth=self.ai_depth, algorithm=self.ai_algorithm)
+            if self.first_player == 'ai':
+                self.ai_player = PLAYER_X
+                self.human_player = PLAYER_O
+            self.current_player = PLAYER_X
+            self.ai = AI(player=self.ai_player, depth=self.ai_depth, algorithm=self.ai_algorithm)
         else:
             self.ai = None
 
@@ -94,7 +109,12 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self._handle_click(event.pos)
 
-        if not self.game_over and self.mode == 'pve' and self.current_player == PLAYER_O and not self.waiting_ai:
+        if (
+            not self.game_over
+            and self.mode == 'pve'
+            and self.current_player == self.ai_player
+            and not self.waiting_ai
+        ):
             self.waiting_ai = True
             self._ai_move()
             self.waiting_ai = False
@@ -130,7 +150,7 @@ class Game:
         if self.game_over:
             return
 
-        if self.mode == 'pve' and self.current_player == PLAYER_O:
+        if self.mode == 'pve' and self.current_player == self.ai_player:
             return
 
         grid_pos = self.gui._pixel_to_grid(*pos)
@@ -165,7 +185,7 @@ class Game:
             return
 
         row, col = move
-        self.board.make_move(row, col, PLAYER_O)
+        self.board.make_move(row, col, self.ai_player)
         self.gui.set_last_move((row, col))
 
         log = f"Move:({row},{col}) Eval:{self.ai.last_eval} States:{self.ai.last_states} Time:{self.ai.last_time:.1f}ms"
@@ -184,4 +204,4 @@ class Game:
             self.gui.show_message("Draw!")
             return
 
-        self.current_player = PLAYER_X
+        self.current_player = self.human_player

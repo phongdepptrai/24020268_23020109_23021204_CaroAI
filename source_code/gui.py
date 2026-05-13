@@ -9,17 +9,19 @@ from constants import (
 
 
 class Button:
-    def __init__(self, x, y, w, h, text, font_size=20):
+    def __init__(self, x, y, w, h, text, font_size=20, selected=False):
         self.rect = pygame.Rect(x, y, w, h)
         self.text = text
         self.font_size = font_size
+        self.selected = selected
         self.hovered = False
 
     def draw(self, surface, font):
-        color = BUTTON_HOVER if self.hovered else BUTTON_COLOR
+        color = HIGHLIGHT_COLOR if self.selected else BUTTON_HOVER if self.hovered else BUTTON_COLOR
         pygame.draw.rect(surface, color, self.rect, border_radius=6)
         pygame.draw.rect(surface, GRID_COLOR, self.rect, 2, border_radius=6)
-        text_surf = font.render(self.text, True, BUTTON_TEXT)
+        text_color = BG_COLOR if self.selected else BUTTON_TEXT
+        text_surf = font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
         surface.blit(text_surf, text_rect)
 
@@ -187,9 +189,16 @@ class GUI:
         size_surf = self.font_md.render(f"Board: {board.size}x{board.size}", True, TEXT_COLOR)
         self.screen.blit(size_surf, (bx, 120))
 
+        if ai_player is not None:
+            human_player = PLAYER_X if ai_player == PLAYER_O else PLAYER_O
+            roles_surf = self.font_sm.render(
+                f"You: {human_player}   AI: {ai_player}", True, TEXT_COLOR
+            )
+            self.screen.blit(roles_surf, (bx, 145))
+
         ai_algo = getattr(self, '_ai_algorithm', 'alpha_beta')
         algo_label = self.font_sm.render(f"AI: {ai_algo}", True, TEXT_COLOR)
-        self.screen.blit(algo_label, (bx, 160))
+        self.screen.blit(algo_label, (bx, 170))
 
         y = 200
         depth = getattr(self, '_current_depth', 3)
@@ -216,7 +225,7 @@ class GUI:
     def show_message(self, msg, duration_ms=2000):
         self.message = msg
 
-    def draw_menu(self):
+    def draw_menu(self, first_player='human'):
         self.screen.fill(BG_COLOR)
 
         title = self.font_xl.render("CARO AI", True, HIGHLIGHT_COLOR)
@@ -233,12 +242,27 @@ class GUI:
             btn.draw(self.screen, self.font_md)
             buttons.append(btn)
 
+        first_label = self.font_md.render("First Move (PvE):", True, TEXT_COLOR)
+        first_rect = first_label.get_rect(center=(self.win_w // 2, 360))
+        self.screen.blit(first_label, first_rect)
+
+        btn_human_first = Button(
+            self.win_w // 2 - 170, 395, 150, 40, "Human First",
+            selected=first_player == 'human'
+        )
+        btn_ai_first = Button(
+            self.win_w // 2 + 20, 395, 150, 40, "AI First",
+            selected=first_player == 'ai'
+        )
+        btn_human_first.draw(self.screen, self.font_md)
+        btn_ai_first.draw(self.screen, self.font_md)
+
         mode_label = self.font_md.render("Game Mode:", True, TEXT_COLOR)
-        mode_rect = mode_label.get_rect(center=(self.win_w // 2, 370))
+        mode_rect = mode_label.get_rect(center=(self.win_w // 2, 465))
         self.screen.blit(mode_label, mode_rect)
 
-        btn_pvp = Button(self.win_w // 2 - 170, 410, 150, 40, "PvP (2 Players)")
-        btn_pve = Button(self.win_w // 2 + 20, 410, 150, 40, "PvE (vs AI)")
+        btn_pvp = Button(self.win_w // 2 - 170, 500, 150, 40, "PvP (2 Players)")
+        btn_pve = Button(self.win_w // 2 + 20, 500, 150, 40, "PvE (vs AI)")
         btn_pvp.draw(self.screen, self.font_md)
         btn_pve.draw(self.screen, self.font_md)
 
@@ -247,12 +271,16 @@ class GUI:
         self.screen.blit(hint, hint_rect)
 
         pygame.display.flip()
-        return buttons, btn_pvp, btn_pve
+        return buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first
 
-    def handle_menu_click(self, pos, buttons, btn_pvp, btn_pve):
+    def handle_menu_click(self, pos, buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first):
         for i, btn in enumerate(buttons):
             if btn.is_clicked(pos):
                 return ('size', BOARD_SIZES[i])
+        if btn_human_first.is_clicked(pos):
+            return ('first_player', 'human')
+        if btn_ai_first.is_clicked(pos):
+            return ('first_player', 'ai')
         if btn_pvp.is_clicked(pos):
             return ('mode', 'pvp')
         if btn_pve.is_clicked(pos):
