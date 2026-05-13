@@ -2,6 +2,61 @@ from constants import EMPTY
 
 WIN_SCORE = 10_000_000
 
+# Hệ số càng cao thì AI càng ưu tiên phòng thủ
+HUMAN_SCORE_MULTIPLIER = 1.2
+ 
+def evaluate(board, ai_player, opponent):
+    """
+    Đánh giá trạng thái bàn cờ theo góc nhìn của AI.
+
+    Điểm dương: có lợi cho AI.
+    Điểm âm: có lợi cho người chơi.
+    """
+
+    if check_win(board, ai_player):
+        return WIN_SCORE
+    
+    if check_win(board, opponent):
+        return -WIN_SCORE
+    
+    ai_score = evaluate_player(board, ai_player)
+    opponent_score = evaluate_player(board, opponent)
+
+    return ai_score - HUMAN_SCORE_MULTIPLIER * opponent_score
+
+
+def check_win(board, player):
+    directions = [
+        (0, 1),
+        (1, 0),
+        (1, 1),
+        (1, -1),
+    ]
+
+    for row in range(board.size):
+        for col in range(board.size):
+            if board.grid[row][col] != player:
+                continue
+
+            for dr, dc in directions:
+                count = 1
+                r = row + dr
+                c = col + dc
+
+                while (
+                    0 <= r < board.size
+                    and 0 <= c < board.size
+                    and board.grid[r][c] == player
+                ):
+                    count += 1
+                    if count >= 5:
+                        return True
+                    r += dr
+                    c += dc
+
+    return False
+
+
 # Tính điểm thế cờ của người chơi
 def evaluate_player(board, player):
     total_score = 0

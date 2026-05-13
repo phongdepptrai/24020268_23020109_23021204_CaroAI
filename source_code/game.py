@@ -3,6 +3,7 @@ from constants import PLAYER_X, PLAYER_O, DEFAULT_DEPTH
 from board import Board
 from ai import AI
 from gui import GUI
+from evaluation import evaluate
 
 class Game:
     def __init__(self):
