@@ -65,8 +65,9 @@ Caro là một trò chơi tranh tài giữa hai người chơi trên một bàn 
 ## Tác Giả
 
 Dự án này được thực hiện bởi:
-- 24020268
-- 23020109
+- 24020268 Nguyễn Chí Phong
+- 23020109 Vũ Văn Mạnh
+- 23021204 Đỗ Thành An
 
 ## Ghi Chú
 
