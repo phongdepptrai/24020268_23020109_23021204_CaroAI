@@ -28,6 +28,15 @@ def evaluate_player(board, player):
                     ):
                         continue
 
+                    count, open_ends = analyze_line(
+                        board, row, col, dr, dc, player
+                    )
+
+                    # TODO: score_pattern function
+                    # total_score += score_pattern(count, open_ends)
+
+    return total_score
+
     
 def analyze_line(board, row, col, dr, dc, player):
     """
