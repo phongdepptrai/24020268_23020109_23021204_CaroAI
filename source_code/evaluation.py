@@ -32,8 +32,7 @@ def evaluate_player(board, player):
                         board, row, col, dr, dc, player
                     )
 
-                    # TODO: score_pattern function
-                    # total_score += score_pattern(count, open_ends)
+                    total_score += score_pattern(count, open_ends)
 
     return total_score
 
@@ -77,6 +76,36 @@ def analyze_line(board, row, col, dr, dc, player):
         open_ends += 1
 
         return count, open_ends
+    
+def score_pattern(count, open_ends):
+    """
+    Phân tích một chuỗi quân liên tiếp.
+
+    Trả về:
+    - count: số quân liên tiếp
+    - open_ends: số đầu mở, có thể là 0, 1 hoặc 2
+    """
+    
+    if count >= 4:
+        return 1_000_000
+
+    if count == 3:
+        if open_ends == 2:
+            return 100_000
+        elif open_ends == 1:
+            return 20_000
+
+    if count == 2:
+        if open_ends == 2:
+            return 5_000
+        elif open_ends == 1:
+            return 500
+
+    if count == 1:
+        if open_ends == 2:
+            return 10
+
+    return 0
 
 
 
