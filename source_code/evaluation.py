@@ -24,7 +24,7 @@ def evaluate_player(board, player):
                     if (
                         0 <= prev_row < size
                         and 0 <= prev_col < size
-                        and board.grid[prev_col][prev_col] == player
+                        and board.grid[prev_row][prev_col] == player
                     ):
                         continue
 
@@ -75,7 +75,7 @@ def analyze_line(board, row, col, dr, dc, player):
     ):
         open_ends += 1
 
-        return count, open_ends
+    return count, open_ends
     
 def score_pattern(count, open_ends):
     """

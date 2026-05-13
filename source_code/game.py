@@ -4,7 +4,6 @@ from board import Board
 from ai import AI
 from gui import GUI
 
-
 class Game:
     def __init__(self):
         self.gui = GUI()
@@ -187,6 +186,7 @@ class Game:
         row, col = move
         self.board.make_move(row, col, self.ai_player)
         self.gui.set_last_move((row, col))
+        self.ai.print_evaluation(self.board)
 
         log = f"Move:({row},{col}) Eval:{self.ai.last_eval} States:{self.ai.last_states} Time:{self.ai.last_time:.1f}ms"
         self.gui.add_ai_log(log)
