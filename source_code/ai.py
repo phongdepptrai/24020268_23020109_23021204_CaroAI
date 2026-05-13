@@ -1,7 +1,7 @@
 import random
 import time
 from constants import PLAYER_X, PLAYER_O, EMPTY
-from evaluation import evaluate_player
+from evaluation import evaluate, evaluate_player
 
 class AI:
     def __init__(self, player=PLAYER_O, depth=3, algorithm='alpha_beta'):
@@ -38,7 +38,7 @@ class AI:
         best_move = random.choice(moves)
 
         self.last_move = best_move
-        self.last_eval = 0
+        self.last_eval = evaluate(board, self.player, self.opponent)
         self.last_states = 0
         self.last_time = (time.time() - start_time) * 1000
         return best_move
