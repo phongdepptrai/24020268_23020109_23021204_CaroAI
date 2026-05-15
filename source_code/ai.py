@@ -1,7 +1,7 @@
 import random
 import time
 from constants import PLAYER_X, PLAYER_O, EMPTY
-
+from evaluation import evaluate, evaluate_player
 
 class AI:
     def __init__(self, player=PLAYER_O, depth=3, algorithm='alpha_beta'):
@@ -38,7 +38,7 @@ class AI:
         best_move = random.choice(moves)
 
         self.last_move = best_move
-        self.last_eval = 0
+        self.last_eval = evaluate(board, self.player, self.opponent)
         self.last_states = 0
         self.last_time = (time.time() - start_time) * 1000
         return best_move
@@ -65,3 +65,14 @@ class AI:
     #     """Hàm đánh giá heuristic"""
     #     pass
     # -------------------------------------------------------
+
+    def print_evaluation(self, board):
+        ai_score = evaluate_player(board, self.player)
+        player_score = evaluate_player(board, self.opponent)
+
+        print("===== EVALUATION =====")
+        print(f"AI ({self.player}) score: {ai_score}")
+        print(f"Player ({self.opponent}) score: {player_score}")
+        print("======================")
+
+    
