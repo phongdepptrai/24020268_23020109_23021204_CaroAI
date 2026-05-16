@@ -74,6 +74,7 @@ class Board:
                     moves.append((r, c))
         return moves
 
+    # For AI optimization: only consider moves near existing pieces
     def get_nearby_moves(self, radius=2):
         if self.move_count == 0:
             center = self.size // 2
