@@ -3,7 +3,7 @@ from constants import EMPTY
 WIN_SCORE = 10_000_000
 
 # Hệ số càng cao thì AI càng ưu tiên phòng thủ
-HUMAN_SCORE_MULTIPLIER = 1.2
+HUMAN_SCORE_MULTIPLIER = 1
  
 def evaluate(board, ai_player, opponent):
     """
