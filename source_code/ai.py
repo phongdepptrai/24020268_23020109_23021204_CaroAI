@@ -100,8 +100,116 @@ class AI:
             return min_eval
 
     def _alpha_beta_root(self, board):
-        # PLACEHOLDER: Alpha-Beta se them sau
-        return self._minimax_root(board)
+        best_score = float('-inf')
+        best_move = None
+
+        alpha = float('-inf')
+        beta = float('inf')
+
+        moves = board.get_nearby_moves(radius = 2)
+        if not moves:
+            moves = board.get_valid_moves()
+
+        for r, c in moves:
+            board.make_move(r, c, self.player)
+
+            score = self._alpha_beta(
+                board,
+                self.depth - 1,
+                alpha,
+                beta,
+                False
+            )
+
+            board.undo_move(r, c)
+
+            if score > best_score:
+                best_score = score
+                best_move = (r, c)
+
+            alpha = max(alpha, best_score)
+
+        self.last_eval = best_score
+        return best_move if best_move else random.choice(moves)
+    
+    def _alpha_beta(self, board, depth, alpha, beta, maximizing):
+        self.last_states += 1
+
+        last = board.move_history[-1] if board.move_history else None
+        if last:
+            result = board.check_winner(last[0], last[1])
+            if result:
+                winner = result[0]
+                if winner == self.player:
+                    return 10000000
+                else:
+                    return -10000000
+
+        if board.is_full():
+            return 0
+
+        if depth == 0:
+            return evaluate(board, self.player, self.opponent)
+
+        moves = board.get_nearby_moves(radius=2)
+        if not moves:
+            moves = board.get_valid_moves()
+
+        if maximizing:
+            max_eval = float('-inf')
+
+            for r, c in moves:
+                board.make_move(r, c, self.player)
+
+                eval_score = self._alpha_beta(
+                    board,
+                    depth - 1,
+                    alpha,
+                    beta,
+                    False
+                )
+
+                board.undo_move(r, c)
+
+                max_eval = max(max_eval, eval_score)
+
+                # MAX cập nhật alpha
+                alpha = max(alpha, max_eval)
+
+                # Cắt nhánh
+                if beta <= alpha:
+                    break
+
+            return max_eval
+
+        else:
+            min_eval = float('inf')
+
+            for r, c in moves:
+                board.make_move(r, c, self.opponent)
+
+                eval_score = self._alpha_beta(
+                    board,
+                    depth - 1,
+                    alpha,
+                    beta,
+                    True
+                )
+
+                board.undo_move(r, c)
+
+                min_eval = min(min_eval, eval_score)
+
+                # MIN cập nhật beta
+                beta = min(beta, min_eval)
+
+                # Cắt nhánh
+                if beta <= alpha:
+                    break
+
+            return min_eval
+    
+
 
     def print_evaluation(self, board):
         ai_score = evaluate_player(board, self.player)
