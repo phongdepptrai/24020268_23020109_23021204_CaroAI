@@ -62,7 +62,7 @@ class GUI:
     def _create_buttons(self):
         bx = self.margin + self.cell_size * self.board_size + 20
         bw = SIDEBAR_WIDTH - 40
-        y = 200
+        y = 235
 
         depth_btn_w = 36
         gap = 7
@@ -70,11 +70,11 @@ class GUI:
             Button(bx + i * (depth_btn_w + gap), y, depth_btn_w, 35, str(depth))
             for i, depth in enumerate(AI_DEPTHS)
         ]
-        y += 50
+        y += 55
         self.btn_switch_ai = Button(bx, y, bw, 35, "AI: Alpha-Beta")
-        y += 50
+        y += 55
         self.btn_restart = Button(bx, y, bw, 35, "Restart")
-        y += 50
+        y += 55
         self.btn_menu = Button(bx, y, bw, 35, "Menu")
 
     def update_board_size(self, size):
@@ -204,10 +204,10 @@ class GUI:
         algo_label = self.font_sm.render(f"AI: {ai_algo}", True, TEXT_COLOR)
         self.screen.blit(algo_label, (bx, 170))
 
-        y = 200
+        y = 235
         depth = getattr(self, '_current_depth', 3)
         depth_label = self.font_md.render(f"Depth: {depth}", True, TEXT_COLOR)
-        self.screen.blit(depth_label, (bx, y - 28))
+        self.screen.blit(depth_label, (bx, y - 30))
         for btn in self.btn_depths:
             btn.selected = int(btn.text) == depth
             btn.draw(self.screen, self.font_md)
@@ -216,7 +216,7 @@ class GUI:
         self.btn_restart.draw(self.screen, self.font_md)
         self.btn_menu.draw(self.screen, self.font_md)
 
-        self._draw_ai_log(bx, 350, bw)
+        self._draw_ai_log(bx, self.btn_menu.rect.bottom + 25, bw)
 
     def _draw_ai_log(self, x, y, w):
         header = self.font_sm.render("AI Log:", True, HIGHLIGHT_COLOR)
