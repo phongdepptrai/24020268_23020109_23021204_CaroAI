@@ -4,7 +4,7 @@ from constants import (
     BG_COLOR, GRID_COLOR, CELL_BG, X_COLOR, O_COLOR,
     TEXT_COLOR, HIGHLIGHT_COLOR, BUTTON_COLOR, BUTTON_HOVER,
     BUTTON_TEXT, WIN_LINE_COLOR, LAST_MOVE_COLOR, EMPTY,
-    PLAYER_X, PLAYER_O, BOARD_SIZES
+    PLAYER_X, PLAYER_O, BOARD_SIZES, AI_DEPTHS
 )
 
 
@@ -43,7 +43,7 @@ class GUI:
 
         board_px = self.margin * 2 + self.cell_size * board_size
         self.win_w = board_px + self.sidebar_w
-        self.win_h = board_px
+        self.win_h = max(board_px, 680)
 
         self.screen = pygame.display.set_mode((self.win_w, self.win_h))
         pygame.display.set_caption("Caro AI")
@@ -62,22 +62,26 @@ class GUI:
     def _create_buttons(self):
         bx = self.margin + self.cell_size * self.board_size + 20
         bw = SIDEBAR_WIDTH - 40
-        y = 200
+        y = 235
 
-        self.btn_depth_minus = Button(bx, y, 40, 35, "-")
-        self.btn_depth_plus = Button(bx + 50, y, 40, 35, "+")
-        y += 50
+        depth_btn_w = 36
+        gap = 7
+        self.btn_depths = [
+            Button(bx + i * (depth_btn_w + gap), y, depth_btn_w, 35, str(depth))
+            for i, depth in enumerate(AI_DEPTHS)
+        ]
+        y += 55
         self.btn_switch_ai = Button(bx, y, bw, 35, "AI: Alpha-Beta")
-        y += 50
+        y += 55
         self.btn_restart = Button(bx, y, bw, 35, "Restart")
-        y += 50
+        y += 55
         self.btn_menu = Button(bx, y, bw, 35, "Menu")
 
     def update_board_size(self, size):
         self.board_size = size
         board_px = self.margin * 2 + self.cell_size * size
         self.win_w = board_px + self.sidebar_w
-        self.win_h = board_px
+        self.win_h = max(board_px, 680)
         if not self.fullscreen:
             self.screen = pygame.display.set_mode((self.win_w, self.win_h))
         self._create_buttons()
@@ -200,32 +204,61 @@ class GUI:
         algo_label = self.font_sm.render(f"AI: {ai_algo}", True, TEXT_COLOR)
         self.screen.blit(algo_label, (bx, 170))
 
-        y = 200
+        y = 235
         depth = getattr(self, '_current_depth', 3)
         depth_label = self.font_md.render(f"Depth: {depth}", True, TEXT_COLOR)
-        self.screen.blit(depth_label, (bx + 100, y + 5))
-        self.btn_depth_minus.draw(self.screen, self.font_md)
-        self.btn_depth_plus.draw(self.screen, self.font_md)
+        self.screen.blit(depth_label, (bx, y - 30))
+        for btn in self.btn_depths:
+            btn.selected = int(btn.text) == depth
+            btn.draw(self.screen, self.font_md)
 
         self.btn_switch_ai.draw(self.screen, self.font_md)
         self.btn_restart.draw(self.screen, self.font_md)
         self.btn_menu.draw(self.screen, self.font_md)
 
-        self._draw_ai_log(bx, 350, bw)
+        self._draw_ai_log(bx, self.btn_menu.rect.bottom + 25, bw)
+
+    def _wrap_text(self, text, font, max_width):
+        words = text.split()
+        if not words:
+            return [""]
+        lines = []
+        line = ""
+        for word in words:
+            test = f"{line} {word}".strip()
+            if font.size(test)[0] <= max_width:
+                line = test
+                continue
+            if line:
+                lines.append(line)
+                line = ""
+            while font.size(word)[0] > max_width and len(word) > 1:
+                cut = len(word)
+                while cut > 1 and font.size(word[:cut])[0] > max_width:
+                    cut -= 1
+                lines.append(word[:cut])
+                word = word[cut:]
+            line = word
+        if line:
+            lines.append(line)
+        return lines
 
     def _draw_ai_log(self, x, y, w):
         header = self.font_sm.render("AI Log:", True, HIGHLIGHT_COLOR)
         self.screen.blit(header, (x, y))
         y += 25
 
-        for i, log in enumerate(self.ai_log[-8:]):
-            surf = self.font_sm.render(log, True, TEXT_COLOR)
-            self.screen.blit(surf, (x, y + i * 20))
+        line_h = 20
+        for log in self.ai_log[-8:]:
+            for line in self._wrap_text(log, self.font_sm, w):
+                surf = self.font_sm.render(line, True, TEXT_COLOR)
+                self.screen.blit(surf, (x, y))
+                y += line_h
 
     def show_message(self, msg, duration_ms=2000):
         self.message = msg
 
-    def draw_menu(self, first_player='human'):
+    def draw_menu(self, first_player='human', ai_depth=3, board_size=15):
         self.screen.fill(BG_COLOR)
 
         title = self.font_xl.render("CARO AI", True, HIGHLIGHT_COLOR)
@@ -238,31 +271,53 @@ class GUI:
 
         buttons = []
         for i, size in enumerate(BOARD_SIZES):
-            btn = Button(self.win_w // 2 - 80, 170 + i * 60, 160, 40, f"{size}x{size}")
+            btn = Button(
+                self.win_w // 2 - 80, 170 + i * 60, 160, 40, f"{size}x{size}",
+                selected=size == board_size
+            )
             btn.draw(self.screen, self.font_md)
             buttons.append(btn)
 
+        depth_label = self.font_md.render("AI Depth:", True, TEXT_COLOR)
+        depth_rect = depth_label.get_rect(center=(self.win_w // 2, 350))
+        self.screen.blit(depth_label, depth_rect)
+
+        depth_buttons = []
+        depth_btn_w = 48
+        gap = 10
+        total_w = len(AI_DEPTHS) * depth_btn_w + (len(AI_DEPTHS) - 1) * gap
+        start_x = self.win_w // 2 - total_w // 2
+        for i, depth in enumerate(AI_DEPTHS):
+            btn = Button(
+                start_x + i * (depth_btn_w + gap), 380,
+                depth_btn_w, 40,
+                str(depth),
+                selected=depth == ai_depth
+            )
+            btn.draw(self.screen, self.font_md)
+            depth_buttons.append(btn)
+
         first_label = self.font_md.render("First Move (PvE):", True, TEXT_COLOR)
-        first_rect = first_label.get_rect(center=(self.win_w // 2, 360))
+        first_rect = first_label.get_rect(center=(self.win_w // 2, 455))
         self.screen.blit(first_label, first_rect)
 
         btn_human_first = Button(
-            self.win_w // 2 - 170, 395, 150, 40, "Human First",
+            self.win_w // 2 - 170, 490, 150, 40, "Human First",
             selected=first_player == 'human'
         )
         btn_ai_first = Button(
-            self.win_w // 2 + 20, 395, 150, 40, "AI First",
+            self.win_w // 2 + 20, 490, 150, 40, "AI First",
             selected=first_player == 'ai'
         )
         btn_human_first.draw(self.screen, self.font_md)
         btn_ai_first.draw(self.screen, self.font_md)
 
         mode_label = self.font_md.render("Game Mode:", True, TEXT_COLOR)
-        mode_rect = mode_label.get_rect(center=(self.win_w // 2, 465))
+        mode_rect = mode_label.get_rect(center=(self.win_w // 2, 560))
         self.screen.blit(mode_label, mode_rect)
 
-        btn_pvp = Button(self.win_w // 2 - 170, 500, 150, 40, "PvP (2 Players)")
-        btn_pve = Button(self.win_w // 2 + 20, 500, 150, 40, "PvE (vs AI)")
+        btn_pvp = Button(self.win_w // 2 - 170, 595, 150, 40, "PvP (2 Players)")
+        btn_pve = Button(self.win_w // 2 + 20, 595, 150, 40, "PvE (vs AI)")
         btn_pvp.draw(self.screen, self.font_md)
         btn_pve.draw(self.screen, self.font_md)
 
@@ -271,12 +326,17 @@ class GUI:
         self.screen.blit(hint, hint_rect)
 
         pygame.display.flip()
-        return buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first
+        return buttons, depth_buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first
 
-    def handle_menu_click(self, pos, buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first):
+    def handle_menu_click(
+        self, pos, buttons, depth_buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first
+    ):
         for i, btn in enumerate(buttons):
             if btn.is_clicked(pos):
                 return ('size', BOARD_SIZES[i])
+        for i, btn in enumerate(depth_buttons):
+            if btn.is_clicked(pos):
+                return ('depth', AI_DEPTHS[i])
         if btn_human_first.is_clicked(pos):
             return ('first_player', 'human')
         if btn_ai_first.is_clicked(pos):
@@ -288,17 +348,16 @@ class GUI:
         return None
 
     def update_button_hover(self, mouse_pos):
-        self.btn_depth_minus.update(mouse_pos)
-        self.btn_depth_plus.update(mouse_pos)
+        for btn in self.btn_depths:
+            btn.update(mouse_pos)
         self.btn_switch_ai.update(mouse_pos)
         self.btn_restart.update(mouse_pos)
         self.btn_menu.update(mouse_pos)
 
     def check_button_click(self, pos):
-        if self.btn_depth_minus.is_clicked(pos):
-            return ('depth', -1)
-        if self.btn_depth_plus.is_clicked(pos):
-            return ('depth', 1)
+        for btn in self.btn_depths:
+            if btn.is_clicked(pos):
+                return ('set_depth', int(btn.text))
         if self.btn_switch_ai.is_clicked(pos):
             return ('switch_ai', None)
         if self.btn_restart.is_clicked(pos):
@@ -318,6 +377,9 @@ class GUI:
 
     def set_algorithm(self, algorithm):
         self._ai_algorithm = algorithm
+        label = "Alpha-Beta" if algorithm == "alpha_beta" else "Minimax"
+        if hasattr(self, "btn_switch_ai"):
+            self.btn_switch_ai.text = f"AI: {label}"
 
     def add_ai_log(self, log_str):
         self.ai_log.append(log_str)

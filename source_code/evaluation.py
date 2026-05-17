@@ -3,7 +3,7 @@ from constants import EMPTY
 WIN_SCORE = 10_000_000
 
 # Hệ số càng cao thì AI càng ưu tiên phòng thủ
-HUMAN_SCORE_MULTIPLIER = 1.2
+HUMAN_SCORE_MULTIPLIER = 1
  
 def evaluate(board, ai_player, opponent):
     """
@@ -49,7 +49,7 @@ def check_win(board, player):
                     and board.grid[r][c] == player
                 ):
                     count += 1
-                    if count >= 5:
+                    if count >= 4:
                         return True
                     r += dr
                     c += dc
@@ -142,11 +142,11 @@ def score_pattern(count, open_ends):
     """
     
     if count >= 4:
-        return 1_000_000
+        return 10_000_000
 
     if count == 3:
         if open_ends == 2:
-            return 100_000
+            return 5_000_000
         elif open_ends == 1:
             return 20_000
 

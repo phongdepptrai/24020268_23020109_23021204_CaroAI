@@ -39,8 +39,10 @@ class Game:
         self.gui.quit()
 
     def _run_menu(self):
-        buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first = self.gui.draw_menu(
-            self.first_player
+        buttons, depth_buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first = self.gui.draw_menu(
+            self.first_player,
+            self.ai_depth,
+            self.board_size
         )
 
         for event in pygame.event.get():
@@ -53,12 +55,15 @@ class Game:
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 result = self.gui.handle_menu_click(
-                    event.pos, buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first
+                    event.pos, buttons, depth_buttons, btn_pvp, btn_pve,
+                    btn_human_first, btn_ai_first
                 )
                 if result:
                     action, value = result
                     if action == 'size':
                         self.board_size = value
+                    elif action == 'depth':
+                        self.ai_depth = value
                     elif action == 'first_player':
                         self.first_player = value
                     elif action == 'mode':
@@ -130,6 +135,12 @@ class Game:
             action, value = btn_result
             if action == 'depth':
                 self.ai_depth = max(1, min(5, self.ai_depth + value))
+                self.gui.set_depth(self.ai_depth)
+                if self.ai:
+                    self.ai.depth = self.ai_depth
+                return
+            if action == 'set_depth':
+                self.ai_depth = value
                 self.gui.set_depth(self.ai_depth)
                 if self.ai:
                     self.ai.depth = self.ai_depth
