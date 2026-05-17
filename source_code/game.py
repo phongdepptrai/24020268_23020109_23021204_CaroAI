@@ -41,7 +41,8 @@ class Game:
     def _run_menu(self):
         buttons, depth_buttons, btn_pvp, btn_pve, btn_human_first, btn_ai_first = self.gui.draw_menu(
             self.first_player,
-            self.ai_depth
+            self.ai_depth,
+            self.board_size
         )
 
         for event in pygame.event.get():

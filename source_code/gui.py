@@ -218,19 +218,47 @@ class GUI:
 
         self._draw_ai_log(bx, self.btn_menu.rect.bottom + 25, bw)
 
+    def _wrap_text(self, text, font, max_width):
+        words = text.split()
+        if not words:
+            return [""]
+        lines = []
+        line = ""
+        for word in words:
+            test = f"{line} {word}".strip()
+            if font.size(test)[0] <= max_width:
+                line = test
+                continue
+            if line:
+                lines.append(line)
+                line = ""
+            while font.size(word)[0] > max_width and len(word) > 1:
+                cut = len(word)
+                while cut > 1 and font.size(word[:cut])[0] > max_width:
+                    cut -= 1
+                lines.append(word[:cut])
+                word = word[cut:]
+            line = word
+        if line:
+            lines.append(line)
+        return lines
+
     def _draw_ai_log(self, x, y, w):
         header = self.font_sm.render("AI Log:", True, HIGHLIGHT_COLOR)
         self.screen.blit(header, (x, y))
         y += 25
 
-        for i, log in enumerate(self.ai_log[-8:]):
-            surf = self.font_sm.render(log, True, TEXT_COLOR)
-            self.screen.blit(surf, (x, y + i * 20))
+        line_h = 20
+        for log in self.ai_log[-8:]:
+            for line in self._wrap_text(log, self.font_sm, w):
+                surf = self.font_sm.render(line, True, TEXT_COLOR)
+                self.screen.blit(surf, (x, y))
+                y += line_h
 
     def show_message(self, msg, duration_ms=2000):
         self.message = msg
 
-    def draw_menu(self, first_player='human', ai_depth=3):
+    def draw_menu(self, first_player='human', ai_depth=3, board_size=15):
         self.screen.fill(BG_COLOR)
 
         title = self.font_xl.render("CARO AI", True, HIGHLIGHT_COLOR)
@@ -243,7 +271,10 @@ class GUI:
 
         buttons = []
         for i, size in enumerate(BOARD_SIZES):
-            btn = Button(self.win_w // 2 - 80, 170 + i * 60, 160, 40, f"{size}x{size}")
+            btn = Button(
+                self.win_w // 2 - 80, 170 + i * 60, 160, 40, f"{size}x{size}",
+                selected=size == board_size
+            )
             btn.draw(self.screen, self.font_md)
             buttons.append(btn)
 
@@ -346,6 +377,9 @@ class GUI:
 
     def set_algorithm(self, algorithm):
         self._ai_algorithm = algorithm
+        label = "Alpha-Beta" if algorithm == "alpha_beta" else "Minimax"
+        if hasattr(self, "btn_switch_ai"):
+            self.btn_switch_ai.text = f"AI: {label}"
 
     def add_ai_log(self, log_str):
         self.ai_log.append(log_str)
