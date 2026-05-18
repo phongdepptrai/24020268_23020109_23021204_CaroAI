@@ -4,6 +4,7 @@ from board import Board
 from ai import AI
 from gui import GUI
 from evaluation import evaluate
+from sample_boards import SAMPLE_BOARDS
 
 class Game:
     def __init__(self):
@@ -23,6 +24,7 @@ class Game:
         self.winner = None
         self.win_cells = []
         self.waiting_ai = False
+        self.loaded_sample_index = None
 
     def run(self):
         clock = pygame.time.Clock()
@@ -98,6 +100,8 @@ class Game:
         self.gui.clear_ai_log()
         self.gui.set_win_cells([])
         self.gui.set_last_move(None)
+        self.gui.set_loaded_sample(None, "")
+        self.loaded_sample_index = None
 
     def _run_game(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -156,6 +160,12 @@ class Game:
                 return
             elif action == 'menu':
                 self.state = 'menu'
+                return
+            elif action == 'ai_move':
+                self._manual_ai_move()
+                return
+            elif action == 'sample':
+                self._load_sample_board(value)
                 return
 
         if self.game_over:
@@ -217,3 +227,54 @@ class Game:
             return
 
         self.current_player = self.human_player
+
+    def _manual_ai_move(self):
+        if self.mode != 'pve' or self.ai is None or self.game_over:
+            return
+        if self.current_player != self.ai_player:
+            return
+
+        self.waiting_ai = False
+        self._ai_move()
+
+    def _load_sample_board(self, index):
+        if not 0 <= index < len(SAMPLE_BOARDS):
+            return
+
+        sample = SAMPLE_BOARDS[index]
+        self.mode = 'pve'
+        self.board_size = sample.board_size
+        self.board = Board(sample.board_size)
+
+        for row, col, player in sample.moves:
+            if not self.board.make_move(row, col, player):
+                raise ValueError(
+                    f"Invalid sample move: {sample.key} ({row}, {col}, {player})"
+                )
+
+        self.ai_player = sample.ai_player
+        self.human_player = PLAYER_X if self.ai_player == PLAYER_O else PLAYER_O
+        self.current_player = self.ai_player
+        self.game_over = False
+        self.winner = None
+        self.win_cells = []
+        self.loaded_sample_index = index
+
+        self.ai = AI(
+            player=self.ai_player,
+            depth=self.ai_depth,
+            algorithm=self.ai_algorithm,
+        )
+
+        self.gui.update_board_size(self.board_size)
+        self.gui.set_depth(self.ai_depth)
+        self.gui.set_algorithm(self.ai_algorithm)
+        self.gui.set_win_cells([])
+        self.gui.set_last_move(None)
+        self.gui.set_loaded_sample(index, sample.name)
+        self.gui.clear_ai_log()
+        self.gui.add_ai_log(f"Loaded {sample.name}")
+        self.gui.add_ai_log(sample.goal)
+        self.gui.add_ai_log("Choose depth/AI, then click AI Move.")
+
+        self.waiting_ai = True

@@ -40,6 +40,8 @@ class GUI:
         self.margin = BOARD_MARGIN
         self.sidebar_w = SIDEBAR_WIDTH
         self.fullscreen = False
+        self.loaded_sample_index = None
+        self.loaded_sample_name = ""
 
         board_px = self.margin * 2 + self.cell_size * board_size
         self.win_w = board_px + self.sidebar_w
@@ -62,7 +64,7 @@ class GUI:
     def _create_buttons(self):
         bx = self.margin + self.cell_size * self.board_size + 20
         bw = SIDEBAR_WIDTH - 40
-        y = 235
+        y = 220
 
         depth_btn_w = 36
         gap = 7
@@ -70,12 +72,33 @@ class GUI:
             Button(bx + i * (depth_btn_w + gap), y, depth_btn_w, 35, str(depth))
             for i, depth in enumerate(AI_DEPTHS)
         ]
-        y += 55
+        y += 48
         self.btn_switch_ai = Button(bx, y, bw, 35, "AI: Alpha-Beta")
-        y += 55
+        y += 44
         self.btn_restart = Button(bx, y, bw, 35, "Restart")
-        y += 55
+        y += 44
         self.btn_menu = Button(bx, y, bw, 35, "Menu")
+        y += 44
+        self.btn_ai_move = Button(bx, y, bw, 35, "AI Move")
+
+        self.sample_label_y = y + 50
+        sample_y = self.sample_label_y + 25
+        sample_gap = 8
+        sample_btn_w = (bw - sample_gap) // 2
+        self.btn_samples = []
+        for index in range(5):
+            row = index // 2
+            col = index % 2
+            self.btn_samples.append(
+                Button(
+                    bx + col * (sample_btn_w + sample_gap),
+                    sample_y + row * 38,
+                    sample_btn_w,
+                    30,
+                    f"Sample {index + 1}",
+                    font_size=16,
+                )
+            )
 
     def update_board_size(self, size):
         self.board_size = size
@@ -204,7 +227,7 @@ class GUI:
         algo_label = self.font_sm.render(f"AI: {ai_algo}", True, TEXT_COLOR)
         self.screen.blit(algo_label, (bx, 170))
 
-        y = 235
+        y = 220
         depth = getattr(self, '_current_depth', 3)
         depth_label = self.font_md.render(f"Depth: {depth}", True, TEXT_COLOR)
         self.screen.blit(depth_label, (bx, y - 30))
@@ -215,8 +238,25 @@ class GUI:
         self.btn_switch_ai.draw(self.screen, self.font_md)
         self.btn_restart.draw(self.screen, self.font_md)
         self.btn_menu.draw(self.screen, self.font_md)
+        self.btn_ai_move.draw(self.screen, self.font_md)
 
-        self._draw_ai_log(bx, self.btn_menu.rect.bottom + 25, bw)
+        sample_label = self.font_sm.render("Sample Boards:", True, HIGHLIGHT_COLOR)
+        self.screen.blit(sample_label, (bx, self.sample_label_y))
+        for index, btn in enumerate(self.btn_samples):
+            btn.selected = self.loaded_sample_index == index
+            btn.draw(self.screen, self.font_sm)
+
+        if self.loaded_sample_name:
+            sample_text = self.font_sm.render(
+                f"Loaded: {self.loaded_sample_name}", True, TEXT_COLOR
+            )
+            sample_y = self.btn_samples[-1].rect.bottom + 8
+            self.screen.blit(sample_text, (bx, sample_y))
+
+        log_y = self.btn_samples[-1].rect.bottom + 32
+        if self.loaded_sample_name:
+            log_y += 20
+        self._draw_ai_log(bx, log_y, bw)
 
     def _wrap_text(self, text, font, max_width):
         words = text.split()
@@ -353,6 +393,9 @@ class GUI:
         self.btn_switch_ai.update(mouse_pos)
         self.btn_restart.update(mouse_pos)
         self.btn_menu.update(mouse_pos)
+        self.btn_ai_move.update(mouse_pos)
+        for btn in self.btn_samples:
+            btn.update(mouse_pos)
 
     def check_button_click(self, pos):
         for btn in self.btn_depths:
@@ -364,6 +407,11 @@ class GUI:
             return ('restart', None)
         if self.btn_menu.is_clicked(pos):
             return ('menu', None)
+        if self.btn_ai_move.is_clicked(pos):
+            return ('ai_move', None)
+        for index, btn in enumerate(self.btn_samples):
+            if btn.is_clicked(pos):
+                return ('sample', index)
         return None
 
     def set_win_cells(self, cells):
@@ -388,6 +436,10 @@ class GUI:
 
     def clear_ai_log(self):
         self.ai_log = []
+
+    def set_loaded_sample(self, index, name=""):
+        self.loaded_sample_index = index
+        self.loaded_sample_name = name
 
     def quit(self):
         pygame.quit()
