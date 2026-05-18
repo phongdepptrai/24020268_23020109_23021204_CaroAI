@@ -74,6 +74,7 @@ class Board:
                     moves.append((r, c))
         return moves
 
+    # For AI optimization: only consider moves near existing pieces
     def get_nearby_moves(self, radius=2):
         if self.move_count == 0:
             center = self.size // 2
@@ -89,7 +90,7 @@ class Board:
                             if 0 <= nr < self.size and 0 <= nc < self.size and self.grid[nr][nc] == EMPTY:
                                 occupied.add((nr, nc))
 
-        return list(occupied) if occupied else self.get_valid_moves()
+        return sorted(occupied) if occupied else self.get_valid_moves()
 
     def copy(self):
         new_board = Board(self.size)
