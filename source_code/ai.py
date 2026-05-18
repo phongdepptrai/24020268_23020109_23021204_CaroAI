@@ -43,18 +43,19 @@ class AI:
     def _minimax_root(self, board):
         best_score = float('-inf')
         best_move = None
-        moves = board.get_nearby_moves(radius=2)
-        if not moves:
-            moves = board.get_valid_moves()
+        best_priority = (-1, -1, float('-inf'))
+        moves = self._get_root_moves(board)
 
         for r, c in moves:
+            priority = self._root_move_priority(board, r, c)
             board.make_move(r, c, self.player)
             score = self._minimax(board, self.depth - 1, False)
             board.undo_move(r, c)
 
-            if score > best_score:
+            if score > best_score or (score == best_score and priority > best_priority):
                 best_score = score
                 best_move = (r, c)
+                best_priority = priority
 
         self.last_eval = best_score
         return best_move if best_move else random.choice(moves)
@@ -102,15 +103,15 @@ class AI:
     def _alpha_beta_root(self, board):
         best_score = float('-inf')
         best_move = None
+        best_priority = (-1, -1, float('-inf'))
 
         alpha = float('-inf')
         beta = float('inf')
 
-        moves = board.get_nearby_moves(radius = 2)
-        if not moves:
-            moves = board.get_valid_moves()
+        moves = self._get_root_moves(board)
 
         for r, c in moves:
+            priority = self._root_move_priority(board, r, c)
             board.make_move(r, c, self.player)
 
             score = self._alpha_beta(
@@ -123,14 +124,37 @@ class AI:
 
             board.undo_move(r, c)
 
-            if score > best_score:
+            if score > best_score or (score == best_score and priority > best_priority):
                 best_score = score
                 best_move = (r, c)
+                best_priority = priority
 
             alpha = max(alpha, best_score)
 
         self.last_eval = best_score
         return best_move if best_move else random.choice(moves)
+
+    def _get_root_moves(self, board):
+        moves = board.get_nearby_moves(radius=2)
+        if not moves:
+            moves = board.get_valid_moves()
+        return moves
+
+    def _root_move_priority(self, board, row, col):
+        win_now = self._would_win(board, row, col, self.player)
+        block_now = self._would_win(board, row, col, self.opponent)
+        center = board.size // 2
+        distance_to_center = abs(row - center) + abs(col - center)
+        return (1 if win_now else 0, 1 if block_now else 0, -distance_to_center)
+
+    def _would_win(self, board, row, col, player):
+        if not board.is_valid_move(row, col):
+            return False
+
+        board.make_move(row, col, player)
+        result = board.check_winner(row, col)
+        board.undo_move(row, col)
+        return bool(result)
     
     def _alpha_beta(self, board, depth, alpha, beta, maximizing):
         self.last_states += 1
