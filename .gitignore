@@ -56,3 +56,23 @@ htmlcov/
 .env
 .env.local
 
+# LaTeX auxiliary files
+report/*.aux
+report/*.log
+report/*.toc
+report/*.out
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/*.synctex(busy)
+report/*.bbl
+report/*.blg
+report/*.nav
+report/*.snm
+report/*.vrb
+report/*.idx
+report/*.ilg
+report/*.ind
+report/*.lot
+report/*.lof
+

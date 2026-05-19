@@ -1,0 +1,503 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+\lstdefinestyle{python}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    commentstyle=\color{green!60!black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Bài tập lớn - Trí tuệ nhân tạo}
+\fancyhead[R]{Cờ Caro AI}
+\fancyfoot[C]{\thepage}
+
+\begin{document}
+
+% ========== TRANG BÌA ==========
+\begin{titlepage}
+    \begin{center}
+        {\Large \textbf{ĐẠI HỌC QUỐC GIA HÀ NỘI}}\\[0.3cm]
+        {\large \textbf{TRƯỜNG ĐẠI HỌC CÔNG NGHỆ}}\\[1.5cm]
+        
+        {\LARGE \textbf{BÁO CÁO BÀI TẬP LỚN}}\\[0.5cm]
+        {\Large \textbf{MÔN: TRÍ TUỆ NHÂN TẠO}}\\[1.5cm]
+        
+        {\Huge \textbf{TRÒ CHƠI CỜ CARO AI}}\\[1cm]
+        {\large Sử dụng thuật toán Minimax và Alpha-Beta Pruning}\\[2cm]
+        
+        \begin{tabular}{rll}
+            \textbf{Sinh viên 1:} & Nguyễn Chí Phong & 24020268 \\[0.2cm]
+            \textbf{Sinh viên 2:} & Vũ Văn Mạnh & 23020109 \\[0.2cm]
+            \textbf{Sinh viên 3:} & Đỗ Thành An & 23021204 \\[0.2cm]
+            \textbf{Lớp:} & ... \\[0.2cm]
+            \textbf{Giảng viên hướng dẫn:} & ... \\
+        \end{tabular}
+        
+        \vfill
+        {\large Hà Nội, năm 2026}
+    \end{center}
+\end{titlepage}
+
+% ========== MỤC LỤC ==========
+\tableofcontents
+\newpage
+
+% ========== PHẦN 1: GIỚI THIỆU ==========
+\section{Giới thiệu bài toán}
+
+\subsection{Mô tả bài toán cờ Caro}
+
+Cờ Caro (hay Gomoku) là trò chơi chiến thuật giữa hai người chơi trên bàn cờ hình vuông. Hai người chơi lần lượt đặt quân cờ (ký hiệu X và O) vào các ô trống trên bàn cờ. Mục tiêu là tạo được một đường thẳng gồm 4 quân cờ liên tiếp theo hàng ngang, hàng dọc hoặc đường chéo.
+
+Trong bài tập lớn này, chúng tôi cài đặt trò chơi cờ Caro với giao diện đồ họa sử dụng thư viện Pygame, trong đó người chơi đấu với máy tính. Máy tính sử dụng các thuật toán tìm kiếm có giới hạn độ sâu (Minimax và Alpha-Beta Pruning) để chọn nước đi tối ưu.
+
+\subsection{Luật chơi và điều kiện thắng}
+
+\begin{itemize}
+    \item Bàn cờ có kích thước tối thiểu $9 \times 9$, có thể chọn $9 \times 9$, $12 \times 12$ hoặc $15 \times 15$.
+    \item Hai người chơi lần lượt đánh quân vào các ô trống.
+    \item Người chơi ký hiệu là \textbf{X}, máy ký hiệu là \textbf{O}, ô trống là dấu chấm (\textbf{.}).
+    \item \textbf{Điều kiện thắng}: Người chơi nào có \textbf{4 quân liên tiếp} theo hàng ngang, hàng dọc hoặc đường chéo sẽ thắng.
+    \item Không xét luật chặn hai đầu.
+    \item Nếu bàn cờ đầy và không có người thắng thì kết quả là \textbf{hòa}.
+\end{itemize}
+
+% ========== PHẦN 2: BIỂU DIỄN VÀ XỬ LÝ TRẠNG THÁI ==========
+\section{Cài đặt trạng thái bàn cờ}
+
+\subsection{Cách biểu diễn trạng thái bàn cờ}
+
+Bàn cờ được biểu diễn bằng một ma trận 2 chiều kích thước $n \times n$, trong đó mỗi ô có thể nhận một trong ba giá trị:
+
+\begin{itemize}
+    \item \texttt{'.'} (EMPTY): ô trống
+    \item \texttt{'X'} (PLAYER\_X): quân của người chơi
+    \item \texttt{'O'} (PLAYER\_O): quân của máy
+\end{itemize}
+
+Lớp \texttt{Board} trong file \texttt{board.py} quản lý trạng thái bàn cờ:
+
+\begin{lstlisting}[style=python]
+class Board:
+    def __init__(self, size=15):
+        self.size = size
+        self.grid = [[EMPTY] * size for _ in range(size)]
+        self.move_history = []
+        self.move_count = 0
+\end{lstlisting}
+
+Ngoài ra, lớp Board còn lưu trữ:
+\begin{itemize}
+    \item \texttt{move\_history}: lịch sử các nước đi (dùng cho undo move trong Minimax)
+    \item \texttt{move\_count}: số quân đã đánh (để kiểm tra bàn cờ đầy)
+\end{itemize}
+
+\subsection{Cách sinh nước đi hợp lệ}
+
+Chương trình cung cấp hai phương thức sinh nước đi:
+
+\textbf{1. Sinh tất cả nước đi hợp lệ} (\texttt{get\_valid\_moves}): Duyệt toàn bộ bàn cờ, trả về danh sách các ô trống. Độ phức tạp $O(n^2)$.
+
+\textbf{2. Sinh nước đi gần quân đã đánh} (\texttt{get\_nearby\_moves}): Chỉ xét các ô trống nằm trong bán kính $r$ (mặc định $r=2$) quanh các quân đã đánh. Phương thức này giúp giảm đáng kể số nhánh cần duyệt trong thuật toán tìm kiếm.
+
+\begin{lstlisting}[style=python]
+def get_nearby_moves(self, radius=2):
+    if self.move_count == 0:
+        center = self.size // 2
+        return [(center, center)]
+    
+    occupied = set()
+    for r in range(self.size):
+        for c in range(self.size):
+            if self.grid[r][c] != EMPTY:
+                for dr in range(-radius, radius + 1):
+                    for dc in range(-radius, radius + 1):
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < self.size and 0 <= nc < self.size:
+                            if self.grid[nr][nc] == EMPTY:
+                                occupied.add((nr, nc))
+    return sorted(occupied) if occupied else self.get_valid_moves()
+\end{lstlisting}
+
+\subsection{Cách kiểm tra trạng thái kết thúc}
+
+Trạng thái kết thúc được kiểm tra sau mỗi nước đi bằng hàm \texttt{check\_winner(row, col)}:
+
+\begin{enumerate}
+    \item Từ vị trí vừa đánh \texttt{(row, col)}, duyệt 4 hướng: ngang, dọc, chéo xuống, chéo lên.
+    \item Với mỗi hướng, đếm số quân liên tiếp cùng loại theo cả 2 chiều.
+    \item Nếu tổng số quân liên tiếp $\geq 4$ (WIN\_LENGTH), trả về người thắng và danh sách các ô thắng.
+    \item Nếu không ai thắng và bàn cờ đầy (\texttt{is\_full()}), kết quả là hòa.
+\end{enumerate}
+
+\begin{lstlisting}[style=python]
+def check_winner(self, row, col):
+    player = self.grid[row][col]
+    directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+    
+    for dr, dc in directions:
+        count = 1
+        win_cells = [(row, col)]
+        # Count positive direction
+        r, c = row + dr, col + dc
+        while (0 <= r < self.size and 0 <= c < self.size 
+               and self.grid[r][c] == player):
+            count += 1
+            win_cells.append((r, c))
+            r += dr; c += dc
+        # Count negative direction
+        r, c = row - dr, col - dc
+        while (0 <= r < self.size and 0 <= c < self.size 
+               and self.grid[r][c] == player):
+            count += 1
+            win_cells.append((r, c))
+            r -= dr; c -= dc
+        
+        if count >= WIN_LENGTH:
+            return player, win_cells
+    return None
+\end{lstlisting}
+
+% ========== PHẦN 3: THUẬT TOÁN AI ==========
+\section{Thuật toán Minimax}
+
+\subsection{Nguyên lý hoạt động}
+
+Minimax là thuật toán tìm kiếm cây trò chơi (game tree) hoạt động dựa trên nguyên lý:
+
+\begin{itemize}
+    \item \textbf{Người chơi MAX} (máy): Chọn nước đi có giá trị \textbf{lớn nhất}.
+    \item \textbf{Người chơi MIN} (đối thủ): Chọn nước đi có giá trị \textbf{nhỏ nhất}.
+\end{itemize}
+
+Thuật toán duyệt tất cả các trường hợp có thể xảy ra đến một độ sâu giới hạn, sau đó sử dụng hàm đánh giá để ước lượng giá trị của các trạng thái lá.
+
+\subsection{Cài đặt}
+
+\begin{lstlisting}[style=python]
+def _minimax(self, board, depth, maximizing):
+    self.last_states += 1
+    
+    # Check terminal state
+    last = board.move_history[-1] if board.move_history else None
+    if last:
+        result = board.check_winner(last[0], last[1])
+        if result:
+            return 10000000 if result[0] == self.player else -10000000
+    
+    if board.is_full():
+        return 0
+    
+    # Depth limit reached -> use evaluation function
+    if depth == 0:
+        return evaluate(board, self.player, self.opponent)
+    
+    moves = board.get_nearby_moves(radius=2)
+    
+    if maximizing:
+        max_eval = float('-inf')
+        for r, c in moves:
+            board.make_move(r, c, self.player)
+            score = self._minimax(board, depth - 1, False)
+            board.undo_move(r, c)
+            max_eval = max(max_eval, score)
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for r, c in moves:
+            board.make_move(r, c, self.opponent)
+            score = self._minimax(board, depth - 1, True)
+            board.undo_move(r, c)
+            min_eval = min(min_eval, score)
+        return min_eval
+\end{lstlisting}
+
+\subsection{Độ phức tạp}
+
+Độ phức tạp của Minimax là $O(b^d)$, trong đó:
+\begin{itemize}
+    \item $b$: branching factor (số nước đi hợp lệ trung bình tại mỗi nút)
+    \item $d$: độ sâu tìm kiếm
+\end{itemize}
+
+Với cờ Caro trên bàn cờ $15 \times 15$ và sử dụng \texttt{get\_nearby\_moves(radius=2)}, giá trị $b$ giảm đáng kể so với duyệt toàn bộ bàn cờ.
+
+% ========== PHẦN 4: ALPHA-BETA ==========
+\section{Thuật toán Alpha-Beta Pruning}
+
+\subsection{Nguyên lý hoạt động}
+
+Alpha-Beta Pruning là cải tiến của Minimax, giúp \textbf{cắt bỏ các nhánh không cần thiết} mà vẫn cho kết quả tương đương. Hai biến được sử dụng:
+
+\begin{itemize}
+    \item \textbf{Alpha} ($\alpha$): Giá trị tốt nhất hiện tại mà người chơi MAX có thể đảm bảo.
+    \item \textbf{Beta} ($\beta$): Giá trị tốt nhất hiện tại mà người chơi MIN có thể đảm bảo.
+\end{itemize}
+
+\textbf{Điều kiện cắt nhánh}: Khi $\beta \leq \alpha$, nhánh hiện tại không cần duyệt thêm vì không thể cho kết quả tốt hơn.
+
+\subsection{Cài đặt}
+
+\begin{lstlisting}[style=python]
+def _alpha_beta(self, board, depth, alpha, beta, maximizing):
+    self.last_states += 1
+    
+    # Check terminal state (same as Minimax)
+    
+    if depth == 0:
+        return evaluate(board, self.player, self.opponent)
+    
+    moves = board.get_nearby_moves(radius=2)
+    
+    if maximizing:
+        max_eval = float('-inf')
+        for r, c in moves:
+            board.make_move(r, c, self.player)
+            score = self._alpha_beta(board, depth-1, alpha, beta, False)
+            board.undo_move(r, c)
+            max_eval = max(max_eval, score)
+            alpha = max(alpha, max_eval)
+            if beta <= alpha:
+                break  # Prune
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for r, c in moves:
+            board.make_move(r, c, self.opponent)
+            score = self._alpha_beta(board, depth-1, alpha, beta, True)
+            board.undo_move(r, c)
+            min_eval = min(min_eval, score)
+            beta = min(beta, min_eval)
+            if beta <= alpha:
+                break  # Prune
+        return min_eval
+\end{lstlisting}
+
+\subsection{So sánh với Minimax}
+
+\begin{itemize}
+    \item Minimax duyệt \textbf{tất cả} các nhánh: $O(b^d)$
+    \item Alpha-Beta cắt bỏ nhánh dư thừa: $O(b^{d/2})$ trong trường hợp tốt nhất
+    \item Cả hai thuật toán cho \textbf{cùng kết quả} (cùng nước đi được chọn)
+    \item Alpha-Beta giảm đáng kể số trạng thái đã xét và thời gian chạy
+\end{itemize}
+
+% ========== PHẦN 5: HÀM ĐÁNH GIÁ ==========
+\section{Hàm đánh giá trạng thái}
+
+Khi đạt đến giới hạn độ sâu, thuật toán sử dụng hàm đánh giá heuristic để ước lượng giá trị của trạng thái bàn cờ.
+
+\subsection{Nguyên lý}
+
+Hàm đánh giá xem xét các mẫu quân cờ (patterns) trên bàn cờ:
+\begin{itemize}
+    \item Số quân liên tiếp (count): 1, 2, 3, 4+
+    \item Số đầu mở (open\_ends): 0, 1, 2
+\end{itemize}
+
+Điểm số được tính theo công thức:
+$$\text{Score} = \text{Score}_{AI} - k \times \text{Score}_{đối thủ}$$
+
+với $k = 1.2$ là hệ số ưu tiên phòng thủ.
+
+\subsection{Bảng điểm số các mẫu}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Số quân} & \textbf{Đầu mở} & \textbf{Điểm số} \\
+\hline
+$\geq 4$ & - & $10\,000\,000$ (thắng) \\
+3 & 2 & $5\,000\,000$ (thắng chắc) \\
+3 & 1 & $20\,000$ \\
+2 & 2 & $5\,000$ \\
+2 & 1 & $500$ \\
+1 & 2 & $10$ \\
+\hline
+\end{tabular}
+\caption{Bảng điểm số cho các mẫu quân cờ}
+\end{table}
+
+\textbf{Nhận xét}: Mẫu ``3 quân, 2 đầu mở'' được đánh giá rất cao ($5\,000\,000$) vì đây là thế thắng chắc -- đối thủ chỉ chặn được một đầu, đầu còn lại sẽ hoàn thành 4 quân.
+
+\subsection{Cài đặt}
+
+\begin{lstlisting}[style=python]
+def score_pattern(count, open_ends):
+    if count >= 4:
+        return 10_000_000
+    if count == 3:
+        if open_ends == 2:
+            return 5_000_000
+        elif open_ends == 1:
+            return 20_000
+    if count == 2:
+        if open_ends == 2:
+            return 5_000
+        elif open_ends == 1:
+            return 500
+    if count == 1:
+        if open_ends == 2:
+            return 10
+    return 0
+
+def evaluate_player(board, player):
+    total_score = 0
+    directions = [(0,1), (1,0), (1,1), (1,-1)]
+    for row in range(board.size):
+        for col in range(board.size):
+            if board.grid[row][col] == player:
+                for dr, dc in directions:
+                    # Skip if already counted from start of chain
+                    prev_row, prev_col = row - dr, col - dc
+                    if (0 <= prev_row < board.size 
+                        and 0 <= prev_col < board.size
+                        and board.grid[prev_row][prev_col] == player):
+                        continue
+                    count, open_ends = analyze_line(
+                        board, row, col, dr, dc, player
+                    )
+                    total_score += score_pattern(count, open_ends)
+    return total_score
+\end{lstlisting}
+
+% ========== PHẦN 6: THỰC NGHIỆM ==========
+\section{Thiết kế các trạng thái thử nghiệm}
+
+Để đánh giá hiệu quả của các thuật toán, chúng tôi thiết kế 6 trạng thái bàn cờ khác nhau:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|l|p{7cm}|}
+\hline
+\textbf{STT} & \textbf{Trạng thái} & \textbf{Mô tả} \\
+\hline
+1 & Đầu ván & Bàn cờ trống hoặc chỉ có 1-2 quân \\
+\hline
+2 & Giữa ván & Khoảng 10-15 quân đã đánh, thế cân bằng \\
+\hline
+3 & AI thắng ngay & AI có 3 quân liên tiếp, chỉ cần 1 nước để thắng \\
+\hline
+4 & Cần chặn & Người chơi có 3 quân liên tiếp, AI phải chặn \\
+\hline
+5 & Cả hai tấn công & Cả hai bên đều có thế 3 quân \\
+\hline
+6 & Nhiều nhánh & Nhiều nước đi hợp lệ, thuật toán phải duyệt nhiều nhánh \\
+\hline
+\end{tabular}
+\caption{Các trạng thái thử nghiệm}
+\end{table}
+
+Mỗi trạng thái được chạy với cả hai thuật toán (Minimax và Alpha-Beta) với các độ sâu 1, 2, 3. Các chỉ số ghi nhận bao gồm: nước đi được chọn, giá trị đánh giá, số trạng thái đã xét và thời gian chạy.
+
+% ========== PHẦN 7: KẾT QUẢ ==========
+\section{Bảng kết quả thực nghiệm}
+
+% PLACEHOLDER: Sinh viên điền kết quả thực nghiệm vào đây
+
+\textit{[Chưa có dữ liệu - cần chạy thực nghiệm và điền kết quả]}
+
+% ========== PHẦN 8: NHẬN XÉT ==========
+\section{Nhận xét và đánh giá}
+
+\subsection{Nhận xét về số trạng thái đã xét và thời gian chạy}
+
+% PLACEHOLDER: Sinh viên điền nhận xét vào đây
+
+\textit{[Chưa có dữ liệu - cần phân tích kết quả thực nghiệm]}
+
+\subsection{Nhận xét về ảnh hưởng của độ sâu tìm kiếm}
+
+% PLACEHOLDER: Sinh viên điền nhận xét vào đây
+
+\textit{[Chưa có dữ liệu - cần phân tích kết quả thực nghiệm]}
+
+\subsection{Ưu điểm và hạn chế của chương trình}
+
+\textbf{Ưu điểm:}
+\begin{itemize}
+    \item Giao diện đồ họa trực quan, dễ sử dụng với Pygame.
+    \item Hỗ trợ nhiều kích thước bàn cờ (9x9, 12x12, 15x15).
+    \item Có thể chuyển đổi giữa Minimax và Alpha-Beta trong lúc chơi.
+    \item Có thể thay đổi độ sâu tìm kiếm trong lúc chơi.
+    \item Sử dụng \texttt{get\_nearby\_moves} để tối ưu hóa số nhánh cần duyệt.
+    \item Hàm đánh giá phân biệt được ``3 quân 2 đầu mở'' là thế thắng chắc.
+\end{itemize}
+
+\textbf{Hạn chế:}
+\begin{itemize}
+    \item Minimax chạy chậm ở độ sâu lớn ($\geq 4$).
+    \item Hàm đánh giá heuristic chưa tối ưu hoàn toàn, có thể bỏ sót một số chiến thuật phức tạp.
+    \item Chưa có cơ chế học tập hay cải tiến dần.
+    \item Giao diện chưa hỗ trợ hoàn tác nước đi (undo).
+\end{itemize}
+
+% ========== PHẦN 9: KẾT LUẬN ==========
+\section{Kết luận và hướng phát triển}
+
+\subsection{Kết luận}
+
+Bài tập lớn đã cài đặt thành công trò chơi cờ Caro với AI sử dụng thuật toán Minimax và Alpha-Beta Pruning. Các thuật toán hoạt động đúng, có khả năng:
+\begin{itemize}
+    \item Nhận diện và thực hiện nước thắng khi có cơ hội.
+    \item Chặn đối thủ khi sắp thua.
+    \item Ưu tiên các thế cờ có tiềm năng tấn công.
+\end{itemize}
+
+Alpha-Beta Pruning cho hiệu quả tốt hơn Minimax về mặt thời gian và số trạng thái đã xét, trong khi vẫn đảm bảo chất lượng nước đi tương đương.
+
+\subsection{Hướng phát triển}
+
+\begin{itemize}
+    \item Cải tiến hàm đánh giá: xem xét các mẫu phức tạp hơn (ví dụ: ``2 quân + 1 quân'' cách nhau 1 ô).
+    \item Tối tiên thứ tự sinh nước đi: ưu tiên các ô có khả năng tạo chuỗi dài.
+    \item Triển khai Iterative Deepening để cải thiện tìm kiếm.
+    \item Thêm cơ chế lưu trữ kết quả đã tính (Transposition Table) để tránh tính toán lặp lại.
+    \item Nâng cấp giao diện: undo, lưu/tải trận đấu, hiệu ứng âm thanh.
+\end{itemize}
+
+% ========== PHẦN 10: REPOSITORY ==========
+\section{Link Repository}
+
+Source code của dự án được lưu trữ trên GitHub:\\
+\url{https://github.com/phongdepptrai/24020268_23020109_23021204_CaroAI}
+
+% ========== PHẦN 11: TÀI LIỆU THAM KHẢO ==========
+\section{Tài liệu tham khảo}
+
+\begin{enumerate}
+    \item Russell, S. \& Norvig, P. (2021). \textit{Artificial Intelligence: A Modern Approach} (4th ed.). Pearson.
+    \item Pygame Documentation. \url{https://www.pygame.org/docs/}
+    \item GeeksforGeeks. ``Minimax Algorithm in Game Theory.'' \url{https://www.geeksforgeeks.org/minimax-algorithm-in-game-theory/}
+    \item GeeksforGeeks. ``Alpha-Beta Pruning.'' \url{https://www.geeksforgeeks.org/alpha-beta-pruning-in-artificial-intelligence/}
+    \item Các repository mẫu tham khảo về cờ Caro AI trên GitHub.
+\end{enumerate}
+
+\end{document}
