@@ -386,6 +386,50 @@ def evaluate_player(board, player):
                     )
                     total_score += score_pattern(count, open_ends)
     return total_score
+
+def evaluate(board, ai_player, opponent):
+    if check_win(board, ai_player):
+        return WIN_SCORE
+    
+    if check_win(board, opponent):
+        return -WIN_SCORE
+    
+    ai_score = evaluate_player(board, ai_player)
+    opponent_score = evaluate_player(board, opponent)
+
+    return ai_score - HUMAN_SCORE_MULTIPLIER * opponent_score
+
+def analyze_line(board, row, col, dr, dc, player):
+    size = board.size
+    count = 0
+
+    r, c = row, col
+
+    while (
+        0 <= r < size
+        and 0 <= c < size
+        and board.grid[r][c] == player
+    ):
+        count += 1
+        r += dr
+        c += dc
+
+    open_ends = 0
+
+    if (0 <= r < size and 0 <= c < size and board.grid[r][c] == EMPTY):
+        open_ends += 1
+
+    before_row = row - dr
+    before_col = col - dc
+
+    if (
+        0 <= before_row < size
+        and 0 <= before_col < size
+        and board.grid[before_row][before_col] == EMPTY
+    ):
+        open_ends += 1
+
+    return count, open_ends
 \end{lstlisting}
 
 % ========== PHẦN 6: THỰC NGHIỆM ==========
